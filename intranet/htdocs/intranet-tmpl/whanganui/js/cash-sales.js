@@ -3,16 +3,35 @@ $( document ).ready(function() {
   var isLoggedIn = $(".loggedinusername").text();
   // Check were loggedin
   if (isLoggedIn) {
+    function bakeCookie(name, value) {
+      var cookie = [
+          name, '=',
+          JSON.stringify(value),
+          '; domain=.', window.location.host.toString(),
+          '; path=/;'
+        ].join('');
+      document.cookie = cookie;
+    }
+    function readCookie(name) {
+      var result = document.cookie.match(new RegExp(name + '=([^;]+)'));
+      result && (result = JSON.parse(result[1]));
+      return result;
+    }
+    function deleteCookie(name) {
+      document.cookie = [
+        name,
+        '=; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.',
+        window.location.host.toString()
+      ].join('');
+    }
     // Load autized values in the backgroud
     getAuthorisedValues();
 
     // TODO
 
     /*
-     * 1. getAuthorisedValues - save to LocalStorage
+     * 1. getAuthorisedValues - save as cookie only update at login
      * 2. Refactor code
-     *
-     *
      *
      */
 
@@ -21,8 +40,7 @@ $( document ).ready(function() {
       var mode = true,
           css1 = 'color: #ffffff',
           css2 = 'color: #bada55';
-
-      return mode ? console.log("%c"+mesg1+(mesg2?", "+"%c"+mesg2:"%c"), css1, css2):'';
+      return mode ? console.log(mesg1, mesg2): "";
     }
     /*******************************************************/
     /********* Cash sale main functions
@@ -38,8 +56,8 @@ $( document ).ready(function() {
         return false;
       } else {
         var total =  0;
-        for(var i=0;i<input.length;i++) {
-          if(isNaN(input[i])){
+        for (var i=0;i<input.length;i++) {
+          if (isNaN(input[i])) {
             continue;
           }
           total += Number(input[i]);
@@ -77,11 +95,11 @@ $( document ).ready(function() {
     }
     // Formating functions
     function getFormattedDate(date, prefomattedDate=false, hideYear=false) {
-      var day = date.getDate();
-      var month = MONTH_NAMES[date.getMonth()];
-      var year = date.getFullYear();
-      var hours = date.getHours();
-      var minutes = date.getMinutes();
+      var day = date.getDate(),
+        month = MONTH_NAMES[date.getMonth()],
+        year = date.getFullYear(),
+        hours = date.getHours(),
+        minutes = date.getMinutes();
 
       if (minutes < 10) {
         minutes = '0' + minutes;
@@ -103,10 +121,11 @@ $( document ).ready(function() {
 
       var date = typeof dateParam === 'object' ? dateParam : new Date(dateParam);
       var DAY_IN_MS = 86400000; // 24 * 60 * 60 * 1000
-      var today = new Date();
-      var yesterday = new Date(today - DAY_IN_MS);
-      var seconds = Math.round((today - date) / 1000);
-      var minutes = Math.round(seconds / 60);
+      var today = new Date(),
+        yesterday = new Date(today - DAY_IN_MS),
+        seconds = Math.round((today - date) / 1000),
+        minutes = Math.round(seconds / 60);
+
       var isToday = today.toDateString() === date.toDateString();
       var isYesterday = yesterday.toDateString() === date.toDateString();
       var isThisYear = today.getFullYear() === date.getFullYear();
@@ -167,7 +186,7 @@ $( document ).ready(function() {
           '<td id="cs_item_action_row_' + row.accountlines_id + '">' +
           '<button id="pay_cs_item_button_' + row.accountlines_id + '" ' +
           'data-account-line-id="' + row.accountlines_id + '" ' +
-          'type="button" class="pay-cs_item-button btn btn-default btn-xs">' +
+          'type="button" class="pay-cs_item-button btn btn-default btn-xs btn-toggle-disable">' +
           'Pay now</button></td>' +
           '</tr>' + "\n";
           totaloutstanding.push(row.amountoutstanding);
@@ -186,13 +205,12 @@ $( document ).ready(function() {
       var tablerow = '';
       if (obj!==null) {
         tablerow = '<tr>' +
-          '<td>Userid</td><td>' +
-          obj.userid + ' - ' +
+          '<td>Account</td><td>' +
           '<a href="' + url + obj.borrowernumber +'">' +
           'View account' +
           '</a></td>' +
           '</tr><tr>' +
-          '<td>Borrowernumber</td><td>' +
+          '<td>Account ID</td><td>' +
           obj.borrowernumber +
           '</td>' +
           '</tr><tr>' +
@@ -201,6 +219,9 @@ $( document ).ready(function() {
           '</tr><tr>' +
           '<td>Surname</td><td>' +
           obj.surname + '</td>' +
+          '</tr><tr>' +
+          '<td colspan="2"><small class="muted">Logged in user: ' +
+          obj.loggedin_user + '</small></td>' +
           '</tr>';
       }
 
@@ -219,12 +240,12 @@ $( document ).ready(function() {
       try {
         setCashSaleSettingsStorage(settings);
         var borrower = getCashSaleSettingsStorage();
-        Debug(borrower);
+        Debug(borrower, true);
         tableRow = buildSettingsTableRow(borrower, url);
 
         return tableRow;
       } catch(e) {
-        Debug(e);
+        Debug(e, true);
         return false;
       }
     }
@@ -345,18 +366,21 @@ $( document ).ready(function() {
         '<strong>Thinking <i class="fa fa-spinner fa-spin"></i></strong></td></tr>';
       return loadingtable;
     }
-    // Load and reset default values for charge inputs
-    function loadDefaultVals() {
-      var cs_type_options_val_selected = $("#cs_type_options option:selected").val(),
-        cs_type_options_text_selected = $("#cs_type_options option:selected").text(),
-        loadingtable = '<tr><td colspan="4" class="text-center">' +
-          '<strong>Thinking <i class="fa fa-spinner fa-spin"></i></strong></td></tr>';
+    function setDefaultAmountValues() {
+      var cs_type_options_val_selected = $("#cs_type_options").find(":selected").val(),
+        cs_type_options_text_selected = $("#cs_type_options").find(":selected").text();
+
       var cs_amount_calculation = parseFloat(cs_type_options_val_selected * $("#cs_qty").val()).toFixed(2);
       var cs_ammount_valid = isNaN(cs_amount_calculation) ? 0 :cs_amount_calculation;
 
       $("#cs_desc").val(cs_type_options_text_selected);
-      //$("#cs_type").val();
       $("#cs_amount").val(cs_ammount_valid);
+    }
+    // Load and reset default values for charge inputs
+    function loadDefaultVals() {
+      setDefaultAmountValues();
+      var loadingtable = '<tr><td colspan="4" class="text-center">' +
+        '<strong>Thinking <i class="fa fa-spinner fa-spin"></i></strong></td></tr>';
       $("#cs_account_lines_table_body").html(loadingtable);
     }
     // Get borrowernumber distinguish between Circ borrower and storage borrower
@@ -375,26 +399,29 @@ $( document ).ready(function() {
           return false;
         }
       }
-    }
+    }    
     // Get authorised values
     async function getAuthorisedValues() {
-      Debug("CALLBACK getAuthorisedValues");
+      Debug("CALLBACK getAuthorisedValues", true);
       var location_protocol = window.location.protocol,
         location_host = window.location.host,
         location_url = location_protocol + '//' + location_host,
         url = location_url + '/cgi-bin/koha/circ/ajax-getauthvalue.pl?category=MANUAL_INV',
         addchargebtn = $("#cs_add_charge_button"),
         typeoptions = $('#cs_type_options');
-
+      // Disable charge button while fetching data
+      addchargebtn.attr('disabled', true);
       try {
-        var data = await getData(url);
+        var data = await getData(url),
           options = buildSelectOptions(data);
+        // Populate charge type options
         typeoptions.html(options);
+        // Populate amount input
+        setDefaultAmountValues();
         // Turn on charge button
         addchargebtn.attr('disabled', false);
       } catch (error) {
-        // Hide error call
-        // console.error(error);
+        console.error(error);
       }
     }
     // Get data fetch method
@@ -539,17 +566,6 @@ $( document ).ready(function() {
           {'name': 'account_lines', 'value': accountlines}];
       }
     }
-    // Array.prototype.diff = function(arr2) {
-    //   var ret = [];
-    //   this.sort();
-    //   arr2.sort();
-    //   for(var i = 0; i < this.length; i += 1) {
-    //       if(arr2.indexOf(this[i]) > -1){
-    //           ret.push(this[i]);
-    //       }
-    //   }
-    //   return ret;
-    // };
     // Build get requests
     function buildSafeGetRequest(uriObject, req) {
       var uri_str = '',
@@ -562,19 +578,6 @@ $( document ).ready(function() {
 
       return safeuri;
     }
-    // Listener for cash sale modal close
-    $('#cash_sale_modal').on('hidden.bs.modal', function () {
-      // do something on modal close…
-      // Reset cash sale amount, qty, note
-      $("#cs_qty").val('1');
-      $("#cs_note").val('');
-      $("#cs_amount").val('0');
-      // Focus on barcode input
-      setTimeout(function(){
-        $(".head-searchbox").filter(":visible").focus();
-      }, 200);
-      Debug("Modal close", "#cash_sale_modal")
-    });
     // Listeners to reset amount values
     $("#cs_type_options").on('change', function() {
       var text_selected= $(this).find(":selected").text(),
@@ -583,7 +586,6 @@ $( document ).ready(function() {
       var cs_amount_valid = isNaN(cs_amount_calculation_optchange) ? 0 : cs_amount_calculation_optchange;
       $("#cs_qty").val(1);
       $("#cs_desc").val(text_selected);
-      //$("#cs_type").val(text_selected);
       $("#cs_amount").val(cs_amount_valid);
     });
     $("#cs_qty").bind('change keyup', function() {
@@ -600,11 +602,21 @@ $( document ).ready(function() {
     //
     $("#cash_sale_modal").on('hidden.bs.modal', function () {
       if (CASH_SALES_BORROWERNUMBER!=="0") {
-        Debug("cash_sale_modal Closed Borrower Number");
+        Debug("cash_sale_modal Closed Borrower Number", true);
 
         $("#cash_sale_page_refresh_modal").modal('show');
         location.reload();
       }
+      // do something on modal close…
+      // Reset cash sale amount, qty, note
+      $("#cs_qty").val('1');
+      $("#cs_note").val('');
+      $("#cs_amount").val('0');
+      // Focus on barcode input
+      setTimeout(function(){
+        $(".head-searchbox").filter(":visible").focus();
+      }, 200);
+      Debug("Modal close", "#cash_sale_modal")
     });
 
     document.addEventListener('click', function (event) {
@@ -627,7 +639,7 @@ $( document ).ready(function() {
         sendGetRequest(safeuri, 'apply_credits');
       }
       // Listener: Pay individual account line
-        if (event.target.matches('.pay-cs_item-button')) {
+      if (event.target.matches('.pay-cs_item-button')) {
         $(event.target).html('Thinking ' + '<i class="fa fa-spinner fa-spin"></i>');
         var accountline_id = $(event.target).data('accountLineId'),
           uriObject = buildUriObject('pay', accountline_id);
@@ -637,7 +649,7 @@ $( document ).ready(function() {
 
         sendGetRequest(safeuri, 'pay');
         }
-      // Listener: Pay individual account line
+      // Listener: Pay all account lines
       if (event.target.matches('#cs_pay_all_button')) {
         $('#cs_pay_all_button').html('Thinking ' + '<i class="fa fa-spinner fa-spin"></i>');
         $('#cs_amount').val('0'); // reset amount to 0
@@ -677,7 +689,6 @@ $( document ).ready(function() {
           checkborrower = getBorrowNumber(),
           uriObject = buildUriObject('account'),
           safeuri = buildSafeGetRequest(uriObject, 'account');
-
 
         loadDefaultVals();
 

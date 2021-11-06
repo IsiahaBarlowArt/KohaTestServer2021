@@ -3,7 +3,6 @@
 use Modern::Perl;
 
 use CGI qw ( -utf8 );
-use Data::Dumper; # Remove
 use JSON;
 use URI::Escape;
 use Try::Tiny;
@@ -20,16 +19,32 @@ use Koha::Patrons;
 use Koha::Patron::Categories;
 use Koha::AuthorisedValues;
 use Koha::Account;
-use Koha::Token;
 
-# Account transaction process
-# 1. Send GET request
-#    A. Send GET => &process=charge
-#    B. Send GET => &process=pay
+# Make sure checked in or kill script
+my $input = CGI->new;
+my ($status, $cookie, $sessionID) = check_api_auth($input, { catalogue => '*'} );
+# Check authorised user
+unless ($status eq "ok") {
+    binmode STDOUT, ':encoding(UTF-8)';
+    print $input->header(-type => 'application/json', -status => '403', -charset => 'UTF-8');
+    exit 0;
+}
 
-# Subroutines
+=head1 SECTION
 
-# Apply credits
+=for comment
+
+Custom API for Cash Sales
+
+=cut
+
+=head3 apply_credits
+
+=cut
+
+# @param account_lines <array>
+# @param borrowernumber <integer>
+
 sub apply_credits {
     my $input = CGI->new();
     # Patron values
@@ -96,7 +111,18 @@ sub apply_credits {
 
     return $response;
 }
-# Charge account
+
+=head3 charge
+
+=cut
+
+# @param desc <string>
+# @param note <string>
+# @param add <string>
+# @param type <string>
+# @param amount <float>
+# @param borrowernumber <integer>
+
 sub charge {
 
     my $input = CGI->new();
@@ -171,7 +197,12 @@ sub charge {
     }
 }
 
-# Check account
+=head3 check
+
+=cut
+
+# @param borrowernumber <integer>
+
 sub check {
   my $input = CGI->new();
   # Patron values
@@ -186,7 +217,7 @@ sub check {
 
   my $response = {
       settings => {
-          userid          => $borrower->{'userid'},
+          loggedin_user   => $borrower->{'userid'},
           firstname       => $borrower->{'firstname'},
           surname         => $borrower->{'surname'},
           borrowernumber  => $borrower->{'borrowernumber'}
@@ -198,36 +229,15 @@ sub check {
   return $response;
 }
 
-# Account lines
-sub get_account_lines {
-    my $input = CGI->new();
-    # Patron values
-    my $borrowernumber      = $input->param('borrowernumber');
-    my $patron              = Koha::Patrons->find($borrowernumber);
-    my $account             = $patron->account;
-    my $account_lines       = $account->outstanding_debits;
-    # Credits and Outstanding
-    my $outstanding_credits = $account->outstanding_credits->total_outstanding;
-    my $total_outstanding   = $account_lines->total_outstanding;
+=head3 pay
 
-    my @accounts;
-    my @accountlines_id;
+=cut
 
-    while (my $account_line = $account_lines->next) {
-        push @accounts, $account_line->{_result}{_column_data};
-        push @accountlines_id, $account_line->{_result}{_column_data}{accountlines_id};
-    }
-    my $response = {
-        accounts            => \@accounts,
-        total_outstanding   => $total_outstanding,
-        outstanding_credits => $outstanding_credits,
-        accountlines_id     => \@accountlines_id
-    };
+# @param payment_type <string>
+# @param payment_note <string>
+# @param account_lines <array>
+# @param borrowernumber <integer>
 
-    return $response;
-}
-
-# Pay account
 sub pay {
     my $input = CGI->new();
     # Param values
@@ -303,7 +313,42 @@ sub pay {
     return $response;
 }
 
-# Render data to browser
+=head3 get_account_lines
+
+=cut
+
+sub get_account_lines {
+    my $input = CGI->new();
+    # Patron values
+    my $borrowernumber      = $input->param('borrowernumber');
+    my $patron              = Koha::Patrons->find($borrowernumber);
+    my $account             = $patron->account;
+    my $account_lines       = $account->outstanding_debits;
+    # Credits and Outstanding
+    my $outstanding_credits = $account->outstanding_credits->total_outstanding;
+    my $total_outstanding   = $account_lines->total_outstanding;
+
+    my @accounts;
+    my @accountlines_id;
+
+    while (my $account_line = $account_lines->next) {
+        push @accounts, $account_line->{_result}{_column_data};
+        push @accountlines_id, $account_line->{_result}{_column_data}{accountlines_id};
+    }
+    my $response = {
+        accounts            => \@accounts,
+        total_outstanding   => $total_outstanding,
+        outstanding_credits => $outstanding_credits,
+        accountlines_id     => \@accountlines_id
+    };
+
+    return $response;
+}
+
+=head3 output
+
+=cut
+
 sub output {
     my ($object, $type, $status) = @_;
     my $output = new CGI;
@@ -313,15 +358,10 @@ sub output {
     print $object;
 }
 
+#
 # Main script
-my $input = CGI->new;
-my ($status, $cookie, $sessionID) = check_api_auth($input, { catalogue => '*'} );
-# Check authorised user
-unless ($status eq "ok") {
-    binmode STDOUT, ':encoding(UTF-8)';
-    print $input->header(-type => 'application/json', -status => '403', -charset => 'UTF-8');
-    exit 0;
-}
+#
+
 # Set vars
 my $process         = $input->param('process') || "check";
 my $borrowernumber  = $input->param('borrowernumber');
@@ -340,21 +380,10 @@ unless ( $patron ) {
 } else {
     my $transaction;
 
-    if ($process eq 'charge') {
-        $transaction = charge();
-    }
-
-    if ($process eq 'apply_credits') {
-        $transaction = apply_credits();
-    }
-
-    if ($process eq 'pay') {
-        $transaction = pay();
-    }
-
-    if ($process eq 'check') {
-        $transaction = check();
-    }
+    $transaction = charge() if $process eq 'charge';
+    $transaction = apply_credits() if $process eq 'apply_credits';
+    $transaction = pay() if $process eq 'pay';
+    $transaction = check() if $process eq 'check';
 
     my $message = "$process response";
     my $account_lines = get_account_lines();

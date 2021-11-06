@@ -7,10 +7,10 @@
           <span id="cs_account_name"></span>
           <span id="cs_total_outstanding"></span>
           <span id="cs_settings_button_wrapper" class="pull-right">
-            <button id="cs_invoice_button" class="btn btn-secondary btn-xs">
+            <button id="cs_invoice_button" class="btn btn-secondary btn-xs btn-toggle-disable">
               Invoice list
             </button>
-            <button id="cs_settings_button" class="btn btn-secondary btn-xs">
+            <button id="cs_settings_button" class="btn btn-secondary btn-xs btn-toggle-disable">
               Settings
             </button>
           </span>
@@ -31,24 +31,24 @@
                     <div id="cs_type_options_loading">
 
                     </div>
-                    <select id="cs_type_options" style="width:120px" >
+                    <select id="cs_type_options" class="input-toggle-disable" style="width:120px" >
                     </select>
                   </td>
                   <td>
                     <strong>Notes</strong>
-                    <input id="cs_note" name="note" type="text" placeholder="Add notes" style="width:120px" />
+                    <input id="cs_note" name="note" class="input-toggle-disable" type="text" placeholder="Add notes" style="width:120px" />
                   </td>
                   <td>
                     <strong>Qty</strong>
-                    <input id="cs_qty" type="number" value="1" step="any" min="1" style="width:60px" />
+                    <input id="cs_qty" type="number" class="input-toggle-disable" value="1" step="any" min="1" style="width:60px" />
                   </td>
                   <td>
                     <strong>Amount</strong>
-                    <input type="number" id="cs_amount" step="any" name="amount" required="required" value="" style="width:60px" />
+                    <input type="number" id="cs_amount" class="input-toggle-disable" step="any" name="amount" required="required" value="" style="width:60px" />
                   </td>
                   <td>
                     <strong>Action</strong>
-                    <button id="cs_add_charge_button" class="btn btn-xs btn-default">
+                    <button id="cs_add_charge_button" class="btn btn-xs btn-default btn-toggle-disable">
                       <i class="fa fa-plus"></i> Add charge
                     </button>
                   </td>
@@ -129,10 +129,10 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button id="cs_apply_credit_button" type="button" class="btn btn-default">
+        <button id="cs_apply_credit_button" type="button" class="btn btn-default btn-toggle-disable">
         </button>
 
-        <button id="cs_pay_all_button" type="button" class="btn btn-success">
+        <button id="cs_pay_all_button" type="button" class="btn btn-success btn-toggle-disable">
           Pay all
         </button>
 
@@ -140,7 +140,7 @@
           Write off all
         </button> -->
 
-        <button id="cs_close_cash_sale_modal_button" type="button" class="btn btn-default deny" data-dismiss="modal">
+        <button id="cs_close_cash_sale_modal_button" type="button" class="btn btn-default deny btn-toggle-disable" data-dismiss="modal">
           <i class="fa fa-times"></i> Finish
         </button>
       </div>
