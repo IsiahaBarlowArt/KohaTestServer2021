@@ -1,14 +1,19 @@
 $( document ).ready(function() {
+  //
+  // TODO: Cleanup this mess lol
+  //
   // Make sure were are loggedin before running script
   var isLoggedIn = $(".loggedinusername").text();
   // Check were loggedin
   if (isLoggedIn) {
+    // Cookie functions
     function bakeCookie(name, value) {
+      var d = new Date();
+      d.setTime(d.getTime() + (1 * 24 * 60 * 60 * 1000));
       var cookie = [
-          name, '=',
-          JSON.stringify(value),
-          '; domain=.', window.location.host.toString(),
-          '; path=/;'
+          name, '=', JSON.stringify(value),
+          ';expires=', d.toUTCString(),
+          ';path=/;','SameSite=Lax;'
         ].join('');
       document.cookie = cookie;
     }
@@ -20,26 +25,34 @@ $( document ).ready(function() {
     function deleteCookie(name) {
       document.cookie = [
         name,
-        '=; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.',
-        window.location.host.toString()
+        '=; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/'
       ].join('');
+    }
+    async function checkOrGetAuthorisedValues() {
+      var location_protocol = window.location.protocol,
+        location_host = window.location.host,
+        location_url = location_protocol + '//' + location_host,
+        url = location_url + '/cgi-bin/koha/circ/ajax-getauthvalue.pl?category=MANUAL_INV';
+      // Check cookie exists
+      var authvalue_cookie_exists = (document.cookie.match(/^(?:.*;)?\s*AUTHVALUES\s*=\s*([^;]+)(?:.*)?$/)||[,null])[1];
+      // Check cookie exists
+      if (authvalue_cookie_exists === null) {
+        // Set COOKIE
+        var data = await getData(url);
+        bakeCookie('AUTHVALUES', data);
+        return readCookie('AUTHVALUES');
+      } else {
+        // Check date valid
+        return readCookie('AUTHVALUES');
+      }
     }
     // Load autized values in the backgroud
     getAuthorisedValues();
 
-    // TODO
-
-    /*
-     * 1. getAuthorisedValues - save as cookie only update at login
-     * 2. Refactor code
-     *
-     */
-
     // Debug mode
     function Debug(mesg1, mesg2=null) {
-      var mode = true,
-          css1 = 'color: #ffffff',
-          css2 = 'color: #bada55';
+      var mode = true;
+
       return mode ? console.log(mesg1, mesg2): "";
     }
     /*******************************************************/
@@ -399,7 +412,7 @@ $( document ).ready(function() {
           return false;
         }
       }
-    }    
+    }
     // Get authorised values
     async function getAuthorisedValues() {
       Debug("CALLBACK getAuthorisedValues", true);
@@ -412,8 +425,10 @@ $( document ).ready(function() {
       // Disable charge button while fetching data
       addchargebtn.attr('disabled', true);
       try {
-        var data = await getData(url),
-          options = buildSelectOptions(data);
+        // Check of get uythorized Values
+        var data = await checkOrGetAuthorisedValues();
+        console.log("COOKIEDATA", data);
+        var options = buildSelectOptions(data);
         // Populate charge type options
         typeoptions.html(options);
         // Populate amount input
@@ -893,5 +908,5 @@ $( document ).ready(function() {
 
       return settings[value];
     }
-  } // edn if isLoggedIn
+  } // end if isLoggedIn
 });
