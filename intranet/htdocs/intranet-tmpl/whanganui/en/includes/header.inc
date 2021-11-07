@@ -29,15 +29,6 @@
                 </li>
             [% END %]
             [% Koha.Preference('IntranetNav') | $raw %]
-            <!-- Previous Patrons list -->
-            [% INCLUDE 'previous-patrons.inc' %]
-
-            [% IF ( !patron.borrowernumber) %]
-              <li>
-                  <a id="cash_sale_modal_link" href="#" data-toggle="modal" data-target="#cash_sale_modal">Cash sale</a>
-              </li>
-            [% END %]
-
 
             <li class="dropdown">
                 <a href="/cgi-bin/koha/mainpage.pl" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
@@ -76,7 +67,14 @@
                     [% END %]
                     <li><a href="/cgi-bin/koha/about.pl">About Koha</a></li>
                 </ul>
-            </li>
+            </li>            
+
+            <!-- Previous Patrons list -->
+            [% INCLUDE 'previous-patrons.inc' %]
+            <!-- Cash Sales -->
+            [% IF ( !patron.borrowernumber) %]
+              [% INCLUDE 'cash-sales.inc' %]
+            [% END %]
         </ul>
     </div>
         <ul id="user-menu" class="nav navbar-nav navbar-right">
