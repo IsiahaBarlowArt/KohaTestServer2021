@@ -70,7 +70,7 @@
 
 
     [% #IF ( cs_modal_close != 'close' ) %]
-      [% INCLUDE 'cash-sale-modal.inc' %]
+      [% INCLUDE 'cash-sales-modal.inc' %]
     [% #END %]
 
 
