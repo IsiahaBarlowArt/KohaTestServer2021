@@ -2,10 +2,14 @@ $( document ).ready(function() {
   //
   // TODO: Cleanup this mess lol
   //
+
   // Make sure were are loggedin before running script
   var isLoggedIn = $(".loggedinusername").text();
   // Check were loggedin
   if (isLoggedIn) {
+  /*******************************************************/
+    /********* Cookie system for Authorized Values
+    /*******************************************************/
     // Cookie functions
     function bakeCookie(name, value) {
       var d = new Date();
@@ -22,13 +26,8 @@ $( document ).ready(function() {
       result && (result = JSON.parse(result[1]));
       return result;
     }
-    function deleteCookie(name) {
-      document.cookie = [
-        name,
-        '=; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/'
-      ].join('');
-    }
-    async function checkOrGetAuthorisedValues() {
+    // Get or set authorized values from cookies
+    async function getOrSetAuthorisedValues() {
       var location_protocol = window.location.protocol,
         location_host = window.location.host,
         location_url = location_protocol + '//' + location_host,
@@ -46,13 +45,17 @@ $( document ).ready(function() {
         return readCookie('AUTHVALUES');
       }
     }
-    // Load autized values in the backgroud
+    /*******************************************************/
+    /********* Cookie system for Authorized Values
+    /*******************************************************/
+    //
+    // Load authorized values first in the backgroud
     getAuthorisedValues();
-
+    //
+    //
     // Debug mode
     function Debug(mesg1, mesg2=null) {
       var mode = true;
-
       return mode ? console.log(mesg1, mesg2): "";
     }
     /*******************************************************/
@@ -131,18 +134,17 @@ $( document ).ready(function() {
       if (!dateParam) {
         return null;
       }
-
+      // Set vars
       var date = typeof dateParam === 'object' ? dateParam : new Date(dateParam);
       var DAY_IN_MS = 86400000; // 24 * 60 * 60 * 1000
       var today = new Date(),
         yesterday = new Date(today - DAY_IN_MS),
         seconds = Math.round((today - date) / 1000),
         minutes = Math.round(seconds / 60);
-
       var isToday = today.toDateString() === date.toDateString();
       var isYesterday = yesterday.toDateString() === date.toDateString();
       var isThisYear = today.getFullYear() === date.getFullYear();
-
+      // Set date output
       if (seconds < 5) {
         return 'now';
       } else if (seconds < 60) {
@@ -158,7 +160,7 @@ $( document ).ready(function() {
       } else if (isThisYear) {
         return getFormattedDate(date, false, true); // 10. January at 10:20
       }
-
+      // Default output date
       return getFormattedDate(date); // 10. January 2017. at 10:20
     }
     // Standard date format
@@ -172,7 +174,7 @@ $( document ).ready(function() {
           " " + hours +
           ":" + datetime.getMinutes() +
           "" + ampm;
-
+      // Formatted date
       return formatted_date;
     }
     // Build out account lines for table
@@ -240,40 +242,37 @@ $( document ).ready(function() {
 
       return tablerow;
     }
+    // Build settings rows html
     function buildSettingsRows(data) {
       var location_protocol = window.location.protocol,
         location_host = window.location.host,
         location_url = location_protocol + '//' + location_host,
         url = location_url + '/cgi-bin/koha/members/pay.pl?borrowernumber=',
-        settings = data.data.transaction.settings,
-        accountLines = data.data.account_lines,
-        total_outstanding = accountLines.total_outstanding,
-        tableRow;
-
+        settings = data.data.transaction.settings;
+      // Set in local storage
       try {
         setCashSaleSettingsStorage(settings);
         var borrower = getCashSaleSettingsStorage();
-        Debug(borrower, true);
-        tableRow = buildSettingsTableRow(borrower, url);
+        var tableRow = buildSettingsTableRow(borrower, url);
 
         return tableRow;
       } catch(e) {
-        Debug(e, true);
+        console.error("Error: buildSettingsRows", e);
         return false;
       }
     }
     // Sorts an array of objects "in place". (Meaning that the original array will be modified and nothing gets returned.)
     function sortOn(arr, prop) {
       arr.sort (
-          function (a, b) {
-              if (a[prop] < b[prop]){
-                  return -1;
-              } else if (a[prop] > b[prop]){
-                  return 1;
-              } else {
-                  return 0;
-              }
+        function (a, b) {
+          if (a[prop] < b[prop]){
+            return -1;
+          } else if (a[prop] > b[prop]) {
+            return 1;
+          } else {
+            return 0;
           }
+        }
       );
     }
     // Build out select options for authorised values
@@ -283,19 +282,16 @@ $( document ).ready(function() {
       var optionCopy = options.slice(0);
       // Alpha sort
       sortOn(optionCopy, "authorised_value");
-
-      Debug("OptionCopy object resort", optionCopy);
       // Build html select options
-      optionCopy.forEach(function(option){
+      optionCopy.forEach(function(option) {
         output.push('<option value="' + option.lib +
         '" data-cs-desc="' + option.authorised_value +
         '">' + option.authorised_value + '</option>');
       });
-
+      // HTML output
       return output.join("\n");
     }
-
-    // Set and style total outstanding
+    // Set and style outstanding credits
     function setOutstandingCredits(outstanding_credits, total_outstanding) {
       var outstanding = Number(total_outstanding).toFixed(2),
         credits = Number(outstanding_credits).toFixed(2),
@@ -375,9 +371,8 @@ $( document ).ready(function() {
     }
     // Loading table rows
     function tableLoadingRows() {
-      var loadingtable = '<tr><td colspan="4" class="text-center">' +
+      return '<tr><td colspan="4" class="text-center">' +
         '<strong>Thinking <i class="fa fa-spinner fa-spin"></i></strong></td></tr>';
-      return loadingtable;
     }
     function setDefaultAmountValues() {
       var cs_type_options_val_selected = $("#cs_type_options").find(":selected").val(),
@@ -392,8 +387,7 @@ $( document ).ready(function() {
     // Load and reset default values for charge inputs
     function loadDefaultVals() {
       setDefaultAmountValues();
-      var loadingtable = '<tr><td colspan="4" class="text-center">' +
-        '<strong>Thinking <i class="fa fa-spinner fa-spin"></i></strong></td></tr>';
+      var loadingtable = tableLoadingRows();
       $("#cs_account_lines_table_body").html(loadingtable);
     }
     // Get borrowernumber distinguish between Circ borrower and storage borrower
@@ -426,7 +420,7 @@ $( document ).ready(function() {
       addchargebtn.attr('disabled', true);
       try {
         // Check of get uythorized Values
-        var data = await checkOrGetAuthorisedValues();
+        var data = await getOrSetAuthorisedValues();
         console.log("COOKIEDATA", data);
         var options = buildSelectOptions(data);
         // Populate charge type options
