@@ -1,6 +1,8 @@
 $( document ).ready(function() {
   //
   // TODO: Cleanup this mess lol
+  // 1. Replace all JQuery with pure JavaScript
+  // 2.
   //
 
   // Make sure were are loggedin before running script
@@ -17,7 +19,7 @@ $( document ).ready(function() {
       var cookie = [
           name, '=', JSON.stringify(value),
           ';expires=', d.toUTCString(),
-          ';path=/;','SameSite=Lax;'
+          ';path=/;', 'SameSite=Lax;' // Fix console err
         ].join('');
       document.cookie = cookie;
     }
@@ -36,7 +38,7 @@ $( document ).ready(function() {
       var authvalue_cookie_exists = (document.cookie.match(/^(?:.*;)?\s*AUTHVALUES\s*=\s*([^;]+)(?:.*)?$/)||[,null])[1];
       // Check cookie exists
       if (authvalue_cookie_exists === null) {
-        // Set COOKIE
+        // Bake our cookie
         var data = await getData(url);
         bakeCookie('AUTHVALUES', data);
         return readCookie('AUTHVALUES');
@@ -72,7 +74,7 @@ $( document ).ready(function() {
         return false;
       } else {
         var total =  0;
-        for (var i=0;i<input.length;i++) {
+        for (var i=0; i<input.length; i++) {
           if (isNaN(input[i])) {
             continue;
           }
@@ -89,10 +91,12 @@ $( document ).ready(function() {
       }
       return value
     }
+    // Checks key pressed is numerical
     function isNumberKey(evt, element) {
       var charCode = (evt.which) ? evt.which : event.keyCode
       if (charCode > 31 && (charCode < 48 || charCode > 57) && !(charCode == 46 || charCode == 8))
         return false;
+
       else {
         var len = $(element).val().length;
         var index = $(element).val().indexOf('.');
@@ -105,8 +109,8 @@ $( document ).ready(function() {
             return false;
           }
         }
-
       }
+
       return true;
     }
     // Formating functions
@@ -420,7 +424,6 @@ $( document ).ready(function() {
       try {
         // Check of get uythorized Values
         var data = await getOrSetAuthorisedValues();
-        console.log("COOKIEDATA", data);
         var options = buildSelectOptions(data);
         // Populate charge type options
         typeoptions.html(options);
@@ -850,7 +853,6 @@ $( document ).ready(function() {
       // Set local
       try {
         localStorage.setItem('cashSaleSettings', csSettings);
-
         return true;
       }
       catch(e) {
@@ -862,7 +864,6 @@ $( document ).ready(function() {
     function getCashSaleSettingsStorage() {
       try {
         var csSettings = localStorage.getItem('cashSaleSettings');
-
         return JSON.parse(csSettings);
       }
       catch(e) {
