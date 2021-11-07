@@ -54,7 +54,7 @@ $( document ).ready(function() {
     //
     //
     // Debug mode
-    function Debug(mesg1, mesg2=null) {
+    function Debug(mesg1, mesg2='') {
       var mode = true;
       return mode ? console.log(mesg1, mesg2): "";
     }
@@ -299,7 +299,7 @@ $( document ).ready(function() {
         html = "Apply credit " + "(" + credits + ")",
         poststr = '';
       $("#cs_credit_amount_applied").text(credits);
-      Debug(outstanding_credits);
+
       if (credits < "0.00") {
         $("#cs_apply_credit_button").show();
         $("#cs_apply_credit_button").text(html);
@@ -409,7 +409,6 @@ $( document ).ready(function() {
     }
     // Get authorised values
     async function getAuthorisedValues() {
-      Debug("CALLBACK getAuthorisedValues", true);
       var location_protocol = window.location.protocol,
         location_host = window.location.host,
         location_url = location_protocol + '//' + location_host,
@@ -497,7 +496,6 @@ $( document ).ready(function() {
         creditrow.hide();
         // Wait on data
         var data = await getData(url);
-        Debug("AWAIT RETURNED: ", data);
 
         if (req==='pay' || req==='apply_credits') {
           updateAccountLineRows(data);
@@ -611,8 +609,6 @@ $( document ).ready(function() {
     //
     $("#cash_sale_modal").on('hidden.bs.modal', function () {
       if (CASH_SALES_BORROWERNUMBER!=="0") {
-        Debug("cash_sale_modal Closed Borrower Number", true);
-
         $("#cash_sale_page_refresh_modal").modal('show');
         location.reload();
       }
@@ -625,58 +621,52 @@ $( document ).ready(function() {
       setTimeout(function(){
         $(".head-searchbox").filter(":visible").focus();
       }, 200);
-      Debug("Modal close", "#cash_sale_modal")
     });
-
+    // Thinking buttton text
+    var thinking_btn = 'Thinking ' + '<i class="fa fa-spinner fa-spin"></i>';
+    // Event listners for main function events
     document.addEventListener('click', function (event) {
       // Listener: Apply credit
       if (event.target.matches('#cs_apply_credit_button')) {
-        $(event.target).html('Thinking ' + '<i class="fa fa-spinner fa-spin"></i>');
+        $(event.target).html(thinking_btn);
         var accountlineIds = $(".cs-account-lines-rows"),
           accounts = [];
-
+        // Push accountlines to accounts array
         accountlineIds.each(function(key, acctline) {
-          Debug(acctline);
           accounts.push($(acctline).data('accountlineId'));
         });
-        var accountline_ids = accounts.join(','),
-          uriObject = buildUriObject('apply_credits', accountline_ids);
-        Debug(uriObject);
+        var accountline_ids = accounts.join(',');
+        var uriObject = buildUriObject('apply_credits', accountline_ids);
         var safeuri = buildSafeGetRequest(uriObject, 'apply_credits');
-        Debug(safeuri);
 
         sendGetRequest(safeuri, 'apply_credits');
       }
       // Listener: Pay individual account line
       if (event.target.matches('.pay-cs_item-button')) {
-        $(event.target).html('Thinking ' + '<i class="fa fa-spinner fa-spin"></i>');
-        var accountline_id = $(event.target).data('accountLineId'),
-          uriObject = buildUriObject('pay', accountline_id);
-        Debug(uriObject);
+        $(event.target).html(thinking_btn);
+        var accountline_id = $(event.target).data('accountLineId');
+        var uriObject = buildUriObject('pay', accountline_id);
         var safeuri = buildSafeGetRequest(uriObject, 'pay');
-        Debug(safeuri);
 
         sendGetRequest(safeuri, 'pay');
         }
       // Listener: Pay all account lines
       if (event.target.matches('#cs_pay_all_button')) {
-        $('#cs_pay_all_button').html('Thinking ' + '<i class="fa fa-spinner fa-spin"></i>');
+        $('#cs_pay_all_button').html(thinking_btn);
         $('#cs_amount').val('0'); // reset amount to 0
         $('#cs_note').val(''); // reset note to empty
         $('#cs_qty').val('1'); // reset qty to 1
 
         var accountlineIds = $(".cs-account-lines-rows"),
           accounts = [];
-
+        // Push accountlines to accounts array
         accountlineIds.each(function(key, acctline) {
-          Debug(acctline);
           accounts.push($(acctline).data('accountlineId'));
         });
-        var accountline_ids = accounts.join(','),
-          uriObject = buildUriObject('pay', accountline_ids);
-        Debug(uriObject);
+
+        var accountline_ids = accounts.join(',');
+        var uriObject = buildUriObject('pay', accountline_ids);
         var safeuri = buildSafeGetRequest(uriObject, 'pay');
-        Debug(safeuri);
 
         sendGetRequest(safeuri, 'pay');
       }
@@ -684,11 +674,11 @@ $( document ).ready(function() {
       if (event.target.matches('#cs_add_charge_button')) {
         event.preventDefault();
         event.stopPropagation();
-        $('#cs_add_charge_button').html('Thinking <i class="fa fa-spinner fa-spin"></i>');
+
+        $('#cs_add_charge_button').html(thinking_btn);
+
         var uriObject = buildUriObject('charge');
-        Debug(uriObject);
         var safeuri = buildSafeGetRequest(uriObject, 'charge');
-        Debug(safeuri);
 
         sendGetRequest(safeuri);
       }
@@ -704,10 +694,8 @@ $( document ).ready(function() {
         // Load default data
         if (CASH_SALES_BORROWERNUMBER!=="0") { // Load Borrower from GET Request (?borrowernumber=id)
           loadBorrowerDefaults();
-          Debug("loadBorrowerDefaults: Callback");
         } else { // Load Borrower from LocalStorage
           loadSettingsDefaults();
-          Debug("loadSettingsDefaults: Callback");
         }
         // Check we have borrowernumber from settings is set
         if (checksetting || CASH_SALES_BORROWERNUMBER!=="0") { // Local storage = TRUE
@@ -718,18 +706,14 @@ $( document ).ready(function() {
           chargePage(false);
           settingsPage(true);
         }
-        Debug("checksetting: ", checksetting);
-        Debug("checkborrower: ", checkborrower);
       }
       // Listener: Charge page
       if (event.target.matches('#cs_invoice_button')) {
-        Debug("Charge page unlock");
         chargePage(true);
         settingsPage(false);
       }
       // Listener: Settings page
       if (event.target.matches('#cs_settings_button')) {
-        Debug("Settings page unlock");
         settingsPage(true);
         chargePage(false);
       }
@@ -737,11 +721,9 @@ $( document ).ready(function() {
       if (event.target.matches('#cs_check_save_borrowernumber_button')) {
         event.preventDefault();
         event.stopPropagation();
-        $('#cs_check_save_borrowernumber_button').html('Thinking <i class="fa fa-spinner fa-spin"></i>');
+        $('#cs_check_save_borrowernumber_button').html(thinking_btn);
         var uriObject = buildUriObject('check');
-        Debug(uriObject);
         var safeuri = buildSafeGetRequest(uriObject, 'check');
-        Debug(safeuri);
 
         sendGetRequest(safeuri, 'check');
       }
@@ -757,7 +739,6 @@ $( document ).ready(function() {
         tableRow = buildSettingsTableRow(settings, url);
 
       if (settings!==null) {
-        Debug("settings: ", settings);
         var text = settings.firstname + ' ' +
           settings.surname;
 
@@ -786,26 +767,21 @@ $( document ).ready(function() {
         $("#cs_add_charge_wrapper").show();
         $("#cs_show_account_lines_wrapper").show();
         $("#cs_pay_all_button").show();
-        Debug("chargePage TRUE");
       } else {
         $("#cs_invoice_button").removeClass('active btn-default');
         $("#cs_add_charge_wrapper").hide();
         $("#cs_show_account_lines_wrapper").hide();
         $("#cs_pay_all_button").hide();
-        Debug("chargePage FALSE");
       }
       if (checkCashSaleSettingsStorage()) {
         $("#cs_invoice_button").attr('disabled', false);
         $("#cs_invoice_button").html('Invoice list');
-        Debug("checkCashSaleSettingsStorage TRUE");
       } else {
         $("#cs_invoice_button").removeClass('active btn-default');
         $("#cs_invoice_button").attr('disabled', true);
         $("#cs_invoice_button").html('<i class="fa fa-lock"></i> Invoice list');
-        Debug("checkCashSaleSettingsStorage FALSE");
       }
       if (CASH_SALES_BORROWERNUMBER!=="0") {
-        Debug("Hide page button!!!");
         $("#cs_invoice_button").hide();
       }
     }
@@ -828,7 +804,6 @@ $( document ).ready(function() {
         $("#cs_settings_button").html('<i class="fa fa-lock"></i> Settings');
       }
       if (CASH_SALES_BORROWERNUMBER!=="0") {
-        Debug("Hide settings button!!!");
         $("#cs_settings_button").hide();
         $("#cs_settings_header_wrapper").hide();
         $("#cs_settings_wrapper").hide();
@@ -898,8 +873,6 @@ $( document ).ready(function() {
     // Get local settings by value
     function getSettingsValue(value) {
       var settings = getCashSaleSettingsStorage();
-      Debug("Call back: getSettingsValue - ", settings[value]);
-
       return settings[value];
     }
   } // end if isLoggedIn
