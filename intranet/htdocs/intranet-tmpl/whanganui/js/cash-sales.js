@@ -756,8 +756,8 @@ $( document ).ready(function() {
     // Load settings default
     function loadBorrowerDefaults() {
       var html = '<i class="fa fa-user"></i> ';
-      var text = CS_BORROWER_FIRSTNAME + ' ' +
-        CS_BORROWER_SURNAME + ' (' +
+      var text = CASH_SALES_FIRSTNAME + ' ' +
+        CASH_SALES_SURNAME + ' (' +
         CASH_SALES_CARDNUMBER + ') ';
 
       $("#cs_account_name").text(text);

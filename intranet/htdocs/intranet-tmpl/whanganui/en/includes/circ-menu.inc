@@ -109,6 +109,8 @@
             [% END %]
         [% END %]
     [% END %]
+
+    <li class="divider"></li>
     <li class="patroncategory">Category: [% patron.category.description | html %] ([% patron.categorycode | html %])</li>
     <li class="patronlibrary">Home library: [% Branches.GetName( patron.branchcode ) | html %]</li>
     <li class="patronborrowernumber">Borrowernumber: [% patron.borrowernumber | html %]</li>
@@ -120,7 +122,43 @@
             <li class="blocker account_locked">Account has been locked</li>
         [% END %]
     [% END %]
-  </ul></div>
+
+    [% UNLESS patron.account_locked %]
+    <li class="divider"></li>
+    <li id="quick-edit-buttons">
+        <div class="btn-group">
+        [% IF CAN_user_borrowers_edit_borrowers %]
+            [% IF ( guarantor ) %]
+                <a id="editpatron" data-toggle="tooltip" title="Edit user" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;destination=circ&amp;borrowernumber=[% patron.borrowernumber | uri %]&amp;guarantorid=[% guarantor.borrowernumber | html %]&amp;category_type=C">
+            [% ELSE %]
+                <a id="editpatron" data-toggle="tooltip" title="Edit user" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;destination=circ&amp;borrowernumber=[% patron.borrowernumber | uri %]">
+            [% END %]
+                <!-- Edit user -->
+                <i class="fa fa-pencil-square-o"></i></a>
+
+            [% IF patron.is_adult AND Koha.Preference("borrowerRelationship") %]
+                <a id="addchild" data-toggle="tooltip" title="Add guarantee" class="btn btn-default btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=add&amp;guarantor_id=[% patron.borrowernumber | uri %]&amp;category_type=C">
+                <!-- Add child user -->
+                <i class="fa fa-user-plus"></i></a>
+            [% END %]
+
+            <a id="duplicate" data-toggle="tooltip" title="Create duplicate user" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=duplicate&amp;borrowernumber=[% patron.borrowernumber | uri %]">
+            <!-- Duplicate user -->
+            <i class="fa fa-copy"></i> </a>
+
+            <a id="changepassword" data-toggle="tooltip" title="Change user password" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/member-password.pl?member=[% patron.borrowernumber | uri %]">
+            <!-- Change user password -->
+            <i class="fa fa-lock"></i></a>
+
+            <a id="changecard" data-toggle="tooltip" title="Edit library card details" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;borrowernumber=[% patron.borrowernumber | uri %]&amp;step=3">
+            <!-- Change card id -->
+            <i class="fa fa-credit-card"></i> </a>
+        [% END %]
+        </div>
+    </li>
+    [% END %]
+    </ul></div>
+
 <div id="menu">
 <ul>
     [% IF ( CAN_user_circulate_circulate_remaining_permissions ) %]
