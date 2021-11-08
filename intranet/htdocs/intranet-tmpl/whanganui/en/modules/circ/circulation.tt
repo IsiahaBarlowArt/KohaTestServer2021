@@ -61,6 +61,7 @@
 
                     [% IF patron %]
                         [% INCLUDE 'members-toolbar.inc' %]
+                        [% INCLUDE 'members-toolbar-modals.inc' %]
                     [% END %]
 
                     <!--  INITIAL BLOC : PARAMETERS & BORROWER INFO -->
@@ -1333,7 +1334,6 @@
     // Set message count
     var messagecount = '';
     var alertcount = "[% alertcount %]";
-    console.log('LINE 1046 alertcount - ', alertcount);
     // Perl messages VAR
     [% USE msgcount = iterator(messages) %]
     [% FOREACH msgcnt IN msgcount %]
@@ -1341,7 +1341,6 @@
     [% IF ( msgcount.size > 0 ) %]
     messagecount = "([% msgcount.size %])";
     [% END %]
-    console.log('LINE 1054 messagecount - ', messagecount);
     //$("#messages_title").hide();
     String.prototype.capitalize = function() {
       return this.charAt(0).toUpperCase() + this.slice(1);
@@ -1362,8 +1361,6 @@
         poststr = (name==="alerts" ? "(" + alertcount + ")": messagecount),
         htmlshow = '<i class="fa fa-plus"></i> Show ' + name + ' ' + poststr,
         htmlhide = '<i class="fa fa-minus"></i> Hide ' + name + ' ' + poststr;
-
-      console.log(toggle);
 
       if (checkCircSettingsStorage(rename)) {
         var settings = getCircSettingsStorage(rename);
@@ -1428,7 +1425,6 @@
           toggle.removeClass('blink');
           toggle.removeClass('text-danger');
         }
-        console.log(resettings);
       } else {
         // Ini set toggle to false
         setCircSettingsStorage(rename, {'hide': false});
