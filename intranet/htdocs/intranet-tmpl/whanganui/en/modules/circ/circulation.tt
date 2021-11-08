@@ -735,6 +735,73 @@
                                     <div class="col-sm-6">
                                 [% END %]
 
+
+<!-- Holds waiting bypass alerts -->
+                                [% IF WaitingHolds.count %]
+                                <div style="margin-top:10px" id="hide_toggle_holds_waiting" class="yui-u">
+                                </div>
+                                <div id="holdswaiting" class="circmessage">
+                                    [% SET waiting_here = 0 %]
+                                    [% SET waiting_elsewhere = 0 %]
+                                    [% FOREACH w IN WaitingHolds %]
+                                        [% IF ( w.branch.branchcode == Branches.GetLoggedInBranchcode()  ) %]
+                                            [% waiting_here = waiting_here + 1 %]
+                                        [% ELSE %]
+                                            [% waiting_elsewhere = waiting_elsewhere + 1 %]
+                                        [% END %]
+                                    [% END %]
+
+                                    [% IF ( waiting_here > 0 ) %]
+                                        <h4>Holds waiting here ([% waiting_here | html %])</h4>
+                                        <ul>
+                                            [% FOREACH w IN WaitingHolds %]
+                                                [% IF ( w.branch.branchcode == Branches.GetLoggedInBranchcode()  ) %]
+                                                    <li>
+                                                        <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% w.biblio.biblionumber | uri %]">[% w.biblio.title | html %]</a>
+                                                        ([% ItemTypes.GetDescription( w.item.effective_itemtype ) | html %]),
+                                                        [% IF ( w.biblio.author ) %] by [% w.biblio.author | html %] [% END %]
+                                                        [% IF ( w.item.itemcallnumber ) %] [[% w.item.itemcallnumber | html %]] [% END %]
+                                                        Hold placed on [% w.reservedate | $KohaDates %].
+                                                        <br />
+                                                        <strong class="waitinghere">
+                                                            [% SET expires_on = w.expirationdate %]
+                                                            Waiting here [% IF expires_on %] until [% expires_on | $KohaDates %] [% END %]
+                                                        </strong>
+                                                    </li>
+                                                [% END %]
+                                            [% END %]
+                                        </ul>
+                                    [% END %]
+
+                                    [% IF ( waiting_elsewhere > 0 ) %]
+                                        <h4>Holds waiting at other libraries ([% waiting_elsewhere | html %])</h4>
+                                        <ul>
+                                            [% FOREACH w IN WaitingHolds %]
+                                                [% IF ( w.branch.branchcode != Branches.GetLoggedInBranchcode()  ) %]
+                                                    <li>
+                                                        <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% w.biblio.biblionumber | uri %]">[% w.biblio.title | html %]</a>
+                                                        ([% ItemTypes.GetDescription( w.item.effective_itemtype ) | html %]),
+                                                        [% IF ( w.biblio.author ) %] by [% w.biblio.author | html %] [% END %]
+                                                        [% IF ( w.item.itemcallnumber ) %] [[% w.item.itemcallnumber | html %]] [% END %]
+                                                        Hold placed on [% w.reservedate | $KohaDates %].
+                                                        <br />
+                                                        <strong>
+                                                            [% SET expires_on = w.expirationdate %]
+                                                            Waiting at [% w.branch.branchname | html %] [% IF expires_on %] until [% expires_on | $KohaDates %] [% END %]
+                                                        </strong>
+                                                    </li>
+                                                [% END %]
+                                            [% END %]
+                                        </ul>
+                                    [% END %]
+                                </div>
+                                [% END # /IF WaitingHolds.count %]
+<!-- Holds waiting bypass alerts -->
+
+                                <div style="margin-top:10px" id="hide_toggle_alerts" class="yui-u">
+                                  <a id="circ_toggle_alerts" href="javascript:void(0)"></a>
+                                </div>
+
                                 [% IF ( noissues ) %]
                                     [% IF ( Koha.Preference('OnSiteCheckouts') && Koha.Preference('OnSiteCheckoutsForce') ) %]
                                         <div id="circmessages" class="circmessage attention">
@@ -750,11 +817,15 @@
                                     </h3>
                                 [% ELSE %]
                                     <div id="circmessages" class="circmessage attention">
-                                        <h3>Attention:</h3>
+                                        <h4>Attention:</h4>
                                 [% END %]
 
-                                <ul>
+[% # Set alertcount %]
+[% alertcount=0 %]
+
+                                <ul id="circ_alerts">
                                     [% IF ( has_modifications ) %]
+[% alertcount=alertcount+1 %]
                                        <li><span class="circ-hlt">Pending modifications:</span> Patron has pending modifications.
                                             [% IF CAN_user_borrowers_edit_borrowers && ( !Koha.Preference('IndependentBranchesPatronModifications') || borrower.branch == branch ) %]
                                                     <a href="/cgi-bin/koha/members/members-update.pl">View all pending patron modifications</a>
@@ -763,6 +834,8 @@
                                     [% END %]
 
                                     [% IF ( warndeparture ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li>
                                             <span class="circ-hlt">Expiration:</span> Patron's card will expire soon.
                                             Patron's card expires on [% expiry | $KohaDates %] <a href="/cgi-bin/koha/members/setstatus.pl?borrowernumber=[% patron.borrowernumber | uri %]&amp;destination=circ&amp;reregistration=y">Renew</a> or <a href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;destination=circ&amp;borrowernumber=[% patron.borrowernumber | html %]">Edit details</a>
@@ -771,12 +844,16 @@
                                     [% END %]
 
                                     [% IF ( returnbeforeexpiry ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li>
                                             <span class="circ-hlt">Set due date to expiry:</span> You have the ReturnBeforeExpiry system preference enabled this means if the expiry date is before the date due, the date due will be set to the expiry date
                                         </li>
                                     [% END %]
 
                                     [% IF ( expired ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li>
                                             <span class="circ-hlt">Expiration:</span> Patron's card has expired.
                                             [% IF ( expiry ) %]
@@ -787,14 +864,20 @@
                                     [% END %]
 
                                     [% IF ( gna ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li class="blocker"><span class="circ-hlt">Address:</span> Patron's address in doubt</li>
                                     [% END %]
 
                                     [% IF ( lost ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li class="blocker"><span class="circ-hlt">Lost: </span>Patron's card is lost</li>
                                     [% END %]
 
                                     [% IF ( userdebarred ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li class="blocker">
                                             <span class="circ-hlt"> Restricted:</span> Patron's account is restricted
 
@@ -824,24 +907,35 @@
                                     [% END # /IF userdebarred %]
 
                                     [% IF ( odues ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li><span class="circ-hlt">Overdues: Patron has ITEMS OVERDUE.</span> <a href="#checkouts">See highlighted items below</a></li>
                                     [% END %]
 
                                     [% SET ClaimReturnedWarningThreshold = Koha.Preference('ClaimReturnedWarningThreshold') %]
                                     [% SET return_claims = patron.return_claims %]
                                     [% IF return_claims.count > ClaimReturnedWarningThreshold %]
+[% alertcount=alertcount+1 %]
+
                                         <li><span class="circ-hlt return-claims">Return claims: Patron has [% return_claims.count | html %] RETURN CLAIMS.</span></li>
                                     [% END %]
 
 
                                     [% IF age_limitations %]
+[% alertcount=alertcount+1 %]
+
                                         [% INCLUDE 'category-out-of-age-limit.inc' %]
                                     [% END %]
 
                                     [% IF ( charges ) %]
+[% alertcount=alertcount+1 %]
+
                                         [% INCLUDE 'blocked-fines.inc' fines = chargesamount %]
                                     [% END %]
+
                                     [% IF ( charges_guarantors_guarantees ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li>
                                             <span class="circ-hlt">Charges:</span> Patron's guarantors and their other guarantees collectively owe [% charges_guarantors_guarantees | $Price %].
                                             [% IF noissues %]
@@ -849,7 +943,10 @@
                                             [% END %]
                                         </li>
                                     [% END %]
+
                                     [% IF ( charges_guarantees ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li>
                                             <span class="circ-hlt">Charges:</span> Patron's guarantees collectively owe [% chargesamount_guarantees | $Price %].
                                                 [% IF noissues %]
@@ -860,105 +957,51 @@
 
 
                                     [% IF ( credits ) %]
+[% alertcount=alertcount+1 %]
+
                                         <li>
                                             <span class="circ-hlt">Credits:</span> Patron has a credit[% IF ( creditsamount ) %] of [% creditsamount | $Price %][% END %]
                                         </li>
                                     [% END %]
 
-                                </ul>
+                                </ul><!-- end circ_alerts -->
 
-                                [% IF WaitingHolds.count %]
-                                    <div id="holdswaiting" class="circmessage">
-                                        [% SET waiting_here = 0 %]
-                                        [% SET waiting_elsewhere = 0 %]
-                                        [% FOREACH w IN WaitingHolds %]
-                                            [% IF ( w.branch.branchcode == Branches.GetLoggedInBranchcode()  ) %]
-                                                [% waiting_here = waiting_here + 1 %]
-                                            [% ELSE %]
-                                                [% waiting_elsewhere = waiting_elsewhere + 1 %]
-                                            [% END %]
-                                        [% END %]
+                            </div> <!-- /#circmessages -->
 
-                                        [% IF ( waiting_here > 0 ) %]
-                                            <h4>Holds waiting here ([% waiting_here | html %])</h4>
-                                            <ul>
-                                                [% FOREACH w IN WaitingHolds %]
-                                                    [% IF ( w.branch.branchcode == Branches.GetLoggedInBranchcode()  ) %]
-                                                        <li>
-                                                            <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% w.biblio.biblionumber | uri %]">[% w.biblio.title | html %]</a>
-                                                            ([% ItemTypes.GetDescription( w.item.effective_itemtype ) | html %]),
-                                                            [% IF ( w.biblio.author ) %] by [% w.biblio.author | html %] [% END %]
-                                                            [% IF ( w.item.itemcallnumber ) %] [[% w.item.itemcallnumber | html %]] [% END %]
-                                                            Hold placed on [% w.reservedate | $KohaDates %].
-                                                            <br />
-                                                            <strong class="waitinghere">
-                                                                [% SET expires_on = w.expirationdate %]
-                                                                Waiting here [% IF expires_on %] until [% expires_on | $KohaDates %] [% END %]
-                                                            </strong>
-                                                        </li>
-                                                    [% END %]
-                                                [% END %]
-                                            </ul>
-                                        [% END %]
+                            <a id="circ_toggle_messages" href="javascript:void(0)">
+                            </a>
 
-                                        [% IF ( waiting_elsewhere > 0 ) %]
-                                            <h4>Holds waiting at other libraries ([% waiting_elsewhere | html %])</h4>
-                                            <ul>
-                                                [% FOREACH w IN WaitingHolds %]
-                                                    [% IF ( w.branch.branchcode != Branches.GetLoggedInBranchcode()  ) %]
-                                                        <li>
-                                                            <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% w.biblio.biblionumber | uri %]">[% w.biblio.title | html %]</a>
-                                                            ([% ItemTypes.GetDescription( w.item.effective_itemtype ) | html %]),
-                                                            [% IF ( w.biblio.author ) %] by [% w.biblio.author | html %] [% END %]
-                                                            [% IF ( w.item.itemcallnumber ) %] [[% w.item.itemcallnumber | html %]] [% END %]
-                                                            Hold placed on [% w.reservedate | $KohaDates %].
-                                                            <br />
-                                                            <strong>
-                                                                [% SET expires_on = w.expirationdate %]
-                                                                Waiting at [% w.branch.branchname | html %] [% IF expires_on %] until [% expires_on | $KohaDates %] [% END %]
-                                                            </strong>
-                                                        </li>
-                                                    [% END %]
-                                                [% END %]
-                                            </ul>
-                                        [% END %]
-
-                                    </div>
-                                [% END # /IF WaitingHolds.count %]
-
+                            <div id="messages" class="circmessage">
                                 [% IF ( notes ) %]
                                     <div id="circnotes" class="circmessage">
                                        <h4>Notes:</h4>
                                         <p><span class="circ-hlt">[% notesmsg | $raw %]</span></p>
                                     </div>
                                 [% END %]
-
-                                <div id="messages" class="circmessage">
-                                    <h4>Messages:</h4>
-                                    <ul>
-                                        [% FOREACH message IN messages %]
-                                            <li>
-                                                [% IF(message.message_type == "L") %]
-                                                    <span class="circ-hlt">
-                                                [% ELSE %]
-                                                    <span>
+                                <h4>Messages:</h4>
+                                <ul>
+                                    [% FOREACH message IN messages %]
+                                        <li>
+                                            [% IF(message.message_type == "L") %]
+                                                <span class="circ-hlt">
+                                            [% ELSE %]
+                                                <span>
+                                            [% END %]
+                                                [% message.message_date | $KohaDates %]
+                                                [% Branches.GetName( message.branchcode ) | html %]
+                                                [% IF message.manager_id %]
+                                                    ( <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% message.manager_id | uri %]">[% message.get_column('manager_firstname') | html %] [% message.get_column('manager_surname') | html %]</a> )
                                                 [% END %]
-                                                    [% message.message_date | $KohaDates %]
-                                                    [% Branches.GetName( message.branchcode ) | html %]
-                                                    [% IF message.manager_id %]
-                                                        ( <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% message.manager_id | uri %]">[% message.get_column('manager_firstname') | html %] [% message.get_column('manager_surname') | html %]</a> )
-                                                    [% END %]
-                                                    <em>"[% message.message | html %]"</em>
-                                                </span>
-                                                [% IF message.branchcode == branch OR Koha.Preference('AllowAllMessageDeletion') %]
-                                                    <a class="btn btn-link" href="/cgi-bin/koha/circ/del_message.pl?message_id=[% message.message_id | html %]&amp;borrowernumber=[% message.borrowernumber | html %]" onclick='return confirm(_("Are you sure you want to delete this message? This cannot be undone."));'><i class="fa fa-trash"></i> Delete</a>
-                                                [% END %]
-                                            </li>
-                                        [% END %]
-                                    </ul>
-                                    <a id="addnewmessageLabel" href="#add_message_form" class="btn btn-link" data-toggle="modal"><i class="fa fa-plus"></i> Add a new message</a>
-                                </div> <!-- /.messages -->
-                            </div> <!-- /#circmessages -->
+                                                <em>"[% message.message | html %]"</em>
+                                            </span>
+                                            [% IF message.branchcode == branch OR Koha.Preference('AllowAllMessageDeletion') %]
+                                                <a class="btn btn-link" href="/cgi-bin/koha/circ/del_message.pl?message_id=[% message.message_id | html %]&amp;borrowernumber=[% message.borrowernumber | html %]" onclick='return confirm(_("Are you sure you want to delete this message? This cannot be undone."));'><i class="fa fa-trash"></i> Delete</a>
+                                            [% END %]
+                                        </li>
+                                    [% END %]
+                                </ul>
+                                <a id="addnewmessageLabel" href="#add_message_form" class="btn btn-link" data-toggle="modal"><i class="fa fa-plus"></i> Add a new message</a>
+                            </div> <!-- /#messages -->
                         </div> <!-- /div or div.col-sm-6 -->
                     </div> <!-- /.row -->
 
@@ -1285,6 +1328,169 @@
             [% END %]
         });
     </script>
+    <script>
+    // START WHANGANUI LIBRARY MODIFICATIONS
+    // Set message count
+    var messagecount = '';
+    var alertcount = "[% alertcount %]";
+    console.log('LINE 1046 alertcount - ', alertcount);
+    // Perl messages VAR
+    [% USE msgcount = iterator(messages) %]
+    [% FOREACH msgcnt IN msgcount %]
+    [% END %]
+    [% IF ( msgcount.size > 0 ) %]
+    messagecount = "([% msgcount.size %])";
+    [% END %]
+    console.log('LINE 1054 messagecount - ', messagecount);
+    //$("#messages_title").hide();
+    String.prototype.capitalize = function() {
+      return this.charAt(0).toUpperCase() + this.slice(1);
+    }
+    function blink_text() {
+      $('.blink').fadeOut(1000);
+      $('.blink').fadeIn(1000);
+    }
+    setInterval(blink_text, 2000);
+    function renameForStorage(name) {
+      var rename = "circ" + name.capitalize() + "Settings";
+      return rename;
+    }
+    function checkCircStatus(toggle_id, display_id, name) {
+      var toggle = $(toggle_id),
+        display = $(display_id),
+        rename = renameForStorage(name),
+        poststr = (name==="alerts" ? "(" + alertcount + ")": messagecount),
+        htmlshow = '<i class="fa fa-plus"></i> Show ' + name + ' ' + poststr,
+        htmlhide = '<i class="fa fa-minus"></i> Hide ' + name + ' ' + poststr;
+
+      console.log(toggle);
+
+      if (checkCircSettingsStorage(rename)) {
+        var settings = getCircSettingsStorage(rename);
+        if (settings.hide===true) {
+          display.hide();
+          toggle.html(htmlshow);
+          // Remove class blink
+          toggle.removeClass('blink');
+          // If alert messages set to blink_text
+          if (name==="alerts" && alertcount > 0) {
+            toggle.addClass('blink');
+            toggle.addClass('text-danger');
+          }
+        } else {
+          display.show();
+          toggle.html(htmlhide);
+          // Remove class blink
+          toggle.removeClass('blink');
+          toggle.removeClass('text-danger');
+        }
+      } else {
+        // Ini set toggle to false
+        setCircSettingsStorage(rename, {'hide': false});
+        display.show();
+        toggle.html(htmlhide);
+        // Remove class blink
+        toggle.removeClass('blink');
+        toggle.removeClass('text-danger');
+      }
+    }
+
+    function toggleCircDisplay(toggle_id, display_id, name) {
+      var toggle = $(toggle_id),
+        display = $(display_id),
+        rename = renameForStorage(name),
+        poststr = (name==="alerts" ? "(" + alertcount + ")": messagecount),
+        htmlshow = '<i class="fa fa-plus"></i> Show ' + name + ' ' + poststr,
+        htmlhide = '<i class="fa fa-minus"></i> Hide ' + name + ' ' + poststr;
+
+      if (checkCircSettingsStorage(rename)) {
+        var settings = getCircSettingsStorage(rename);
+        if (settings.hide===true) {
+          setCircSettingsStorage(rename, {'hide': false});
+        } else {
+          setCircSettingsStorage(rename, {'hide': true});
+        }
+        var resettings = getCircSettingsStorage(rename);
+        if (resettings.hide===true) {
+          display.hide();
+          toggle.html(htmlshow);
+          // Remove class blink
+          toggle.removeClass('blink');
+          // If alert messages set to blink_text
+          if (name==="alerts" && alertcount > 0) {
+            toggle.addClass('blink');
+            toggle.addClass('text-danger');
+          }
+        } else {
+          display.show();
+          toggle.html(htmlhide);
+          // Remove class blink
+          toggle.removeClass('blink');
+          toggle.removeClass('text-danger');
+        }
+        console.log(resettings);
+      } else {
+        // Ini set toggle to false
+        setCircSettingsStorage(rename, {'hide': false});
+        display.show();
+        toggle.html(htmlhide);
+        // Remove class blink
+        toggle.removeClass('blink');
+        toggle.removeClass('text-danger');
+      }
+    }
+    //
+    // Listeners for toggle_display_alerts, toggle_display_messages
+    //
+    document.addEventListener('click', function (event) {
+      // Listener: #toggle_display_alerts
+      if (event.target.matches('#circ_toggle_alerts')) {
+        toggleCircDisplay("#circ_toggle_alerts", "#circmessages", "alerts");
+      }
+      // Listener: Pay individual account line
+      if (event.target.matches('#circ_toggle_messages')) {
+        toggleCircDisplay("#circ_toggle_messages", "#messages", "messages");
+      }
+    });
+    // Call on checkCircStatus
+    checkCircStatus("#circ_toggle_messages", "#messages", "messages");
+    checkCircStatus("#circ_toggle_alerts", "#circmessages", "alerts");
+    // circSettings storage functions
+    function checkCircSettingsStorage(name) {
+      if(localStorage.hasOwnProperty(name) &&
+         localStorage.getItem(name) !== '') {
+        return true;
+      } else {
+        return false;
+      }
+    }
+    function setCircSettingsStorage(name, settings) {
+      var circSettings = JSON.stringify(settings);
+      // Set local
+      try {
+        localStorage.setItem(name, circSettings);
+
+        return true;
+      }
+      catch(e) {
+        console.error("Error: setCircSettingsStorage - ", e);
+        return false;
+      }
+    }
+    function getCircSettingsStorage(name) {
+      try {
+        var settings = localStorage.getItem(name);
+
+        return JSON.parse(settings);
+      }
+      catch(e) {
+        console.error("Error: getCircSettingsStorage - ", e);
+        return false;
+      }
+    }
+    // END WHANGANUI LIBRARY MODIFICATIONS
+    </script>
+
     [% INCLUDE 'str/members-menu.inc' %]
     [% Asset.js("js/members-menu.js") | $raw %]
 [% END %]

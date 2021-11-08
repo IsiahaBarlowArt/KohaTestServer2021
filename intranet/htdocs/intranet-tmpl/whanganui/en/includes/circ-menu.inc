@@ -129,7 +129,7 @@
         <div class="btn-group">
         [% IF CAN_user_borrowers_edit_borrowers %]
             [% IF ( guarantor ) %]
-                <a id="editpatron" data-toggle="tooltip" title="Edit user" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;destination=circ&amp;borrowernumber=[% patron.borrowernumber | uri %]&amp;guarantorid=[% guarantor.borrowernumber | html %]&amp;category_type=C">
+                <a id="editpatron" data-toggle="tooltip" title="Edit user" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;destination=circ&amp;borrowernumber=[% patron.borrowernumber | uri %]&amp;guarantorid=[% guarantor.borrowernumber | uri %]&amp;category_type=C">
             [% ELSE %]
                 <a id="editpatron" data-toggle="tooltip" title="Edit user" class="btn btn-sm btn-default" href="/cgi-bin/koha/members/memberentry.pl?op=modify&amp;destination=circ&amp;borrowernumber=[% patron.borrowernumber | uri %]">
             [% END %]
