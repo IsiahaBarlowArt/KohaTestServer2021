@@ -223,17 +223,15 @@ ready(function(){
   async function sendRequestForCredit(url) {
     // Default options are marked with *
     var response = await fetch(url, {
-      method: 'GET', // *GET, POST, PUT, DELETE, etc.
-      mode: 'same-origin', // no-cors, *cors, same-origin
-      cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-      credentials: 'same-origin', // include, *same-origin, omit
+      method: 'GET',
+      mode: 'same-origin',
+      cache: 'no-cache',
+      credentials: 'same-origin',
       headers: {
-        // 'Content-Type': 'application/json'
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      redirect: 'follow', // manual, *follow, error
-      referrer: 'no-referrer', // no-referrer, *client
-      // body: JSON.stringify(data) // body data type must match "Content-Type" header
+      redirect: 'follow',
+      referrer: 'no-referrer',
     });
 
     return await response.json(); // parses JSON response into native JavaScript objects
@@ -277,7 +275,7 @@ ready(function(){
   });
 
   $("#add_credit_modal").on('hidden.bs.modal', function () {
-    if (CS_BORROWER_NUMBER!=="0") {
+    if (CASH_SALES_BORROWERNUMBER!=="0") {
       console.log("add_credit_modal Closed");
 
       $("#cash_sale_page_refresh_modal").modal('show');
