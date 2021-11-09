@@ -246,9 +246,11 @@
             // Enable/disable controls if checkboxes are checked
             var checkedBoxes = $("input.cb:checked");
             if ($(checkedBoxes).size()) {
-              $("#payselected, #writeoff-selected").prop("disabled",false);
+              $("#payselected").prop("disabled",false);
+              $("#writeoff-selected-btn").prop("disabled",false);
             } else {
-              $("#payselected, #writeoff-selected").prop("disabled",true);
+              $("#payselected").prop("disabled",true);
+              $("#writeoff-selected-btn").prop("disabled",true);
             }
         }
         $(document).ready(function(){
