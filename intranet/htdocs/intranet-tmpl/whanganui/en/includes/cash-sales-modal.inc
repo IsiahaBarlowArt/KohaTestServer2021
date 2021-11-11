@@ -1,4 +1,4 @@
-<div id="cash_sale_modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cashSaleModalLabel" aria-hidden="true">
+<div id="cash_sale_modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cashSaleModalLabel" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -149,9 +149,7 @@
 </div>
 
 <!-- CS Refresh Modal -->
-<div class="modal fade" id="cash_sale_page_refresh_modal" tabindex="-1" role="dialog"
-
-aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="cash_sale_page_refresh_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-body">

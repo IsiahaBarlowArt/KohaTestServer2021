@@ -53,6 +53,8 @@
 [% INCLUDE 'renew_results.inc' renew_results=renew_results %]
 [% IF ( accounts ) %]
     <form action="/cgi-bin/koha/members/pay.pl" method="post" id="pay-fines-form">
+    <!-- notes input -->
+    <input type="hidden" id="notes" name="notes" />
     <input type="hidden" name="borrowernumber" id="borrowernumber" value="[% patron.borrowernumber | html %]" />
 <p><span class="checkall"><a id="CheckAll" href="#"><i class="fa fa-check"></i> Select all</a></span> | <span class="clearall"><a id="CheckNone" href="#"><i class="fa fa-remove"></i> Clear all</a></span></p>
 <table id="finest">
@@ -79,7 +81,10 @@
 <tr>
     <td>
     [% IF ( line.amountoutstanding > 0 ) %]
+    <!--
         <input class="cb" type="checkbox" checked="checked" name="incl_par_[% line.accountlines_id | html %]" />
+    -->
+        <input class="cb selected-wo-checkbox" data-wo-acctype="[% line.debit_type_code | html %]" data-wo-amount="[% line.amountoutstanding %]" data-wo-indiv="[% line.accountlines_id | html %]" type="checkbox" checked="checked" name="incl_par_[% line.accountlines_id | html %]" />
     [% END %]
     </td>
     <td class="actions">
@@ -134,7 +139,7 @@
     </td>
     <td class="actions">
         <a href="#" class="add-note" data-accountlines_id="[% line.accountlines_id | html %]"><i class="fa fa-plus"></i> Add note</a>
-        <span class="payment_note" id="payment_note_[% line.accountlines_id | html %]" style="display:none"><input type="text" size="10" name="payment_note_[% line.accountlines_id | html %]" value="" /> <a href="#" class="cancel-note"><i class="fa fa-remove"></i></a></span>
+        <span class="payment_note" id="payment_note_[% line.accountlines_id | html %]" style="display:none"><input type="text" size="10" class="payment-note-input" name="payment_note_[% line.accountlines_id | html %]" value="" /> <a href="#" class="cancel-note"><i class="fa fa-remove"></i></a></span>
     </td>
     <td class="debit" style="text-align: right;">[% line.amount | $Price %]</td>
     <td class="debit" style="text-align: right;">[% line.amountoutstanding | $Price %]</td>
@@ -177,7 +182,7 @@
 </fieldset>
 </form>
 
-<div id="write_off_modal" class="modal" tabindex="-1" role="dialog">
+<div id="write_off_modal" class="modal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -191,8 +196,10 @@
           Enter staff code:
           <input type='text' id="writeOffCode" style='width:40px'>
         </div>
+        <div id="writeOffThinking">
+          <h4><i class="fa fa-spinner fa-spin"></i> Hi <span id="wo_staff_member_display"></span>, I'm thinking, please wait until I'm done...</h4>
+        </div>
         <div id="writeOffOptions">
-
           <h4>Select a reason to write of charge</h4>
           <hr>
           <div id="writeOffOptionsSelection">
@@ -205,13 +212,13 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-sm btn-default" data-dismiss="modal">Close</button>
+        <button id="wo_close_modal" type="button" class="btn btn-sm btn-default" data-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
 </div>
 <!-- Write off refresh Modal -->
-<div class="modal fade" id="write_off_refresh_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="write_off_refresh_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-body">
@@ -303,6 +310,312 @@
                 "autoWidth": false
             }, columns_settings );
         });
+    </script>
+    <script>
+      // Set global window vars
+      window.staff_valid = false;
+      window.staff_member = 'No staff code';
+      window.submit_type = '';
+      window.submit_title = '';
+      window.wo_indiv = '';
+      window.wo_indiv_num = '';
+      window.wo_indiv_amt = '';
+      window.wo_action = null;
+      window.wo_selected_nums = null;
+      window.staffReasons = '';
+      window.staffCodes = '';
+      window.wo_selected_url = '/cgi-bin/koha/members/paycollect.pl?borrowernumber=' + [% patron.borrowernumber | uri %];
+      /////////////////////////////////////// Writeoff functions
+      // Display and authentication blocks
+      function displayWriteOffModal(show=false) {
+        $("#writeOffOptions").hide();
+        $("#writeOffCode").val("");
+        $("#writeOffReasonCustom").val("");
+
+        $("#write_off_modal").on('shown.bs.modal', function () {
+          $("#writeOffCode").focus();
+        });
+
+        if (show===true) {
+          $("#write_off_modal").modal("show");
+        } else {
+          $("#write_off_modal").modal("hide");
+        }
+      }
+      function displayWriteOffThinking(show=false) {
+        if (show===true) {
+          $("#writeOffThinking").show();
+          $("#wo_close_modal").attr("disabled", true);
+          $("#wo_staff_member_display").html(window.staff_member);
+        } else {
+          $("#writeOffThinking").hide();
+        }
+      }
+      function displayWriteOffAuthForm(show=false) {
+        if (show===true) {
+          $("#writeOffAuthForm").show();
+        } else {
+          $("#writeOffAuthForm").hide();
+        }
+      }
+      function displayWriteOffOptions(show=false){
+        if (show===true) {
+          $("#writeOffOptions").show();
+        } else {
+          $("#writeOffOptions").hide();
+        }
+      }
+      function displayWriteOffOptionsSelection() {
+        var listyle = "margin: 6px 0px";
+        window.staffReasons.forEach(function(reason) {
+          var listobj = '<a data-wo-reason="' + reason + '" href="javascript:void(0)" class="write-off-options" style="' + listyle + '">' + reason + '</a><br / />';
+          $("#writeOffOptionsSelection").append(listobj);
+        });
+      }
+      // get ids and amt sum
+      function getIdsAndAmt() {
+        var selectedObj = window.wo_selected_nums;
+        var selectedIds = selectedObj.map((a) => a.id);
+        var selectedAmt = selectedObj.reduce((a, b) => +a + +b.amount, 0);
+
+        return {
+          ids: selectedIds,
+          amt: selectedAmt
+        };
+      }
+      // Process data functions
+      function processWOSelectedURI(amt, selected, notes) {
+        var wo_selected_url = window.wo_selected_url;
+        var wo_type = '&type=WRITEOFF';
+        var wo_amt = '&amt='+amt
+        var wo_selected = ' &selected='+selected;
+        var wo_notes = '&notes='+encodeURIComponent(notes);
+        var wo_safe_uri = wo_selected_url + wo_type + wo_amt + wo_selected + wo_notes;
+
+        return wo_safe_uri;
+      }
+      // Process reason
+      function processWriteOffReason(reason) {
+        var staff_reason = window.staff_member + ' - ' + reason;
+        var wo_snums     = window.wo_selected_nums;
+        var wo_inums     = window.wo_indiv_num;
+        var wo_action    = window.wo_action;
+
+        // a. Individual
+        if (wo_action==='wo_individual') {
+          var indiv_id = window.wo_indiv_num;
+          var indiv_amt = window.wo_indiv_amt;
+          var paymentNoteInput = $('input[name="payment_note_' + indiv_id +'"]');
+          paymentNoteInput.val(staff_reason);
+        }
+
+        // b. Selected
+        if (wo_snums && wo_action==='wo_selected') {
+          var last_el = wo_snums.length - 1;
+          var payment_note = "";
+          if (wo_snums) {
+            // Fix payment_note_ because compacted into one payment note
+            $.each(wo_snums, function(index, item) {
+              var paymentNoteInput = $('input[name="payment_note_' + item.id +'"]');
+              if (index===0) { // First element
+                payment_note = staff_reason;
+              } else {
+                payment_note = ', $' + item.amount + ' - ' + item.detail;
+              }
+              paymentNoteInput.val(payment_note);
+            });
+            $("#notes").val(staff_reason);
+          }
+        }
+
+        // c. All
+        if (wo_snums && wo_action==='wo_all') {
+          if (wo_snums) {
+            $.each(wo_snums, function(index, item) {
+              var paymentNoteInput = $('input[name="payment_note_' + item.id +'"]');
+              paymentNoteInput.val(staff_reason + ': ($' + item.amount + ' - ' + item.detail + ')');
+            });
+            $("#notes").val(staff_reason);
+          }
+        }
+      }
+      // Process the pay fine form
+      function processPayFinesForm() {
+        var action = window.submit_type;
+        var input;
+        displayWriteOffOptions(false);
+        displayWriteOffThinking(true);
+        // Write off individual item
+        if (action==="wo_individual") {
+          input = $("<input>").attr("name", window.wo_indiv);
+        }
+        // Write off selected items
+        if (action==="wo_selected") {
+          input = $("<input>").attr("name", "writeoff_selected").attr("value", "writeoff_selected");
+        }
+        // Write off all items
+        if (action==="wo_all") {
+          input = $("<input>").attr("name", "woall").attr("value", "woall");
+        }
+        // Append hidden input
+        $("#pay-fines-form").prepend(input.attr("type", "hidden"));
+        // Serialized form data
+        var formData = $("#pay-fines-form").serializeArray();
+        console.log('formData', formData);
+        $("#pay-fines-form").submit();
+      }
+      // Document ready
+      $(document).ready(function(){
+        // Listeners for the 3 write off options
+        // a. Individual
+        $(document).on('click', ".writeoff-individual-btn", function(e) {
+          console.log(".writeoff-individual-btn", "clicked");
+          // Prevent default actions
+          event.preventDefault();
+          // Get the individual data from btn
+          var iwo_data = $(this).data("woIndiv");
+          var iwo_amnt = Number($(this).data("woAmount")).toFixed(2);
+          var iwo_btn = $(this);
+          iwo_btn.prop('disabled', true);
+          window.submit_type = 'wo_individual';
+          window.wo_action = 'wo_individual';
+          window.wo_indiv = "wo_indiv_" + iwo_data;
+          window.wo_indiv_num = iwo_data;
+          window.wo_indiv_amt = iwo_amnt;
+          $("#writeOffDescription").html("Write off " + iwo_amnt + " from selected charge");
+          // Display the write off auth form
+          displayWriteOffModal(true);
+        });
+        // b. Selected
+        $(document).on('click', "#writeoff-selected-btn", function(event) {
+          // Prevent default actions
+          event.preventDefault();
+          // Get data from selected writeoff by checked checkbox class
+          var swoObject = [];
+          var swoNums = [];
+          var sum = 0;
+          $(".selected-wo-checkbox:checked").each(function() {
+            var acctype = $(this).data("woAcctype");
+            swoObject.push($(this).data("woAmount"));
+            swoNums.push({
+              'id': $(this).data("woIndiv"),
+              'amount': Number($(this).data("woAmount")).toFixed(2),
+              'detail': String(acctype)
+            });
+          });
+          $.each(swoObject, function() {
+            sum += parseFloat(this) || 0;
+          });
+          var swo_amnt = Number(sum).toFixed(2);
+          var swo_btn = $(this);
+          swo_btn.prop('disabled', true);
+          window.submit_type = 'wo_selected';
+          window.wo_action = 'wo_selected';
+          window.submit_title = ' selected';
+          window.wo_selected_nums = swoNums;
+
+          console.log("selected nums", window.wo_selected_nums);
+          $("#wo_reason_custom_btn").html("Write off selected");
+          // Set modal title bar writeoff type
+          $("#writeOffDescription").html("Write off " + swo_amnt + " from selected charges");
+          // Display the write off auth form
+          displayWriteOffModal(true);
+        });
+        // c. All
+        $(document).on('click', "#writeoff-all-btn", function(event) {
+          // Prevent default actions
+          event.preventDefault();
+          // Get data from selected writeoff by checked checkbox class
+          var awo_amnt = $(this).data("woAmount");
+          var awo_btn = $(this);
+          // Get data from selected writeoff by checked checkbox class
+          var swoObject = [];
+          var swoNums = [];
+          var sum = 0;
+          $(".selected-wo-checkbox").each(function() {
+            var acctype = $(this).data("woAcctype");
+            swoObject.push($(this).data("woAmount"));
+            swoNums.push({
+              'id': $(this).data("woIndiv"),
+              'amount': Number($(this).data("woAmount")).toFixed(2),
+              'detail': String(acctype)
+            });
+          });
+          awo_btn.prop('disabled', true);
+          window.submit_type = 'wo_all';
+          window.wo_action = 'wo_all';
+          window.submit_title = ' all';
+          window.wo_selected_nums = swoNums;
+          $("#wo_reason_custom_btn").html("Write off all");
+          // Set modal title bar writeoff type
+          $("#writeOffDescription").html("Write off all charges " + awo_amnt);
+          // Display the write off auth form
+          displayWriteOffModal(true);
+        });
+        // Listener to validate staff-code
+        $(document).on("keyup", "#writeOffCode", function() {
+          var staffcode = $(this).val();
+          var staffCodes = window.staffCodes;
+          // Loop each element in the array
+          for (var i = 0; i < staffCodes.length; i++) {
+            // Check staff code
+            if (staffCodes[i].code===staffcode) {
+              window.staff_valid = true;
+              window.staff_member = staffCodes[i].name;
+              displayWriteOffAuthForm(false);
+              displayWriteOffOptions(true);
+              displayWriteOffThinking(false);
+              displayWriteOffOptionsSelection();
+              console.log("Valid staff write off code.");
+              break;
+            } else {
+              displayWriteOffAuthForm(true);
+              displayWriteOffOptions(false);
+              displayWriteOffThinking(false);
+              console.log("Invalid staff write off code.");
+            }
+          }
+        });
+
+        // Pre-selected reasons and custom reasons blocks
+        // a. Pre-selected options
+        $(document).on("click", ".write-off-options", function() {
+          // Get reason
+          var reason = $(this).data('woReason');
+          // Process reason
+          processWriteOffReason(reason);
+          // Process action
+          processPayFinesForm();
+        });
+        // b. Custom options
+        $(document).on("keyup", "#writeOffReasonCustom", function() {
+          // Get reason
+          var reason = $(this).val();
+          // Show btn
+          if ($(this).val()!=='') {
+            $("#wo_reason_custom_btn").show();
+          } else {
+            $("#wo_reason_custom_btn").hide();
+          }
+          // Process reason
+          processWriteOffReason(reason);
+        });
+
+        // Listener for write off button
+        $(document).on("click", "#wo_reason_custom_btn", function() {
+          // Process action
+          processPayFinesForm();
+        });
+        // Hide custom reason submit button
+        $("#wo_reason_custom_btn").hide();
+
+        $("#write_off_modal").on('hidden.bs.modal', function () {
+          $("#write_off_refresh_modal").modal('show');
+          location.reload();
+        });
+
+        displayWriteOffThinking(false);
+      }); // End document ready
     </script>
 [% END %]
 
